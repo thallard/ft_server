@@ -1,28 +1,45 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    container_entrypoint.sh                            :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: thallard <thallard@student.42lyon.fr>      +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2020/12/11 11:35:27 by thallard          #+#    #+#              #
+#    Updated: 2020/12/14 17:05:30 by thallard         ###   ########lyon.fr    #
+#                                                                              #
+# **************************************************************************** #
+
 #!/bin/bash
 
-service nginx start
-mkdir /var/www/localhost
-
-
-cp ./index.html /var/www/html/
-
-# PHPMyAdmin part
-@wget https://files.phpmyadmin.net/phpMyAdmin/4.9.0.1/phpMyAdmin-4.9.0.1-all-languages.tar.gz
-tar -zxvf phpMyAdmin-4.9.0.1-all-languages.tar.gz
-mv phpMyAdmin-4.9.0.1-all-languages /usr/share/phpMyAdmin
-
-ls -la /etc/nginx/sites-available
-
-ln -s /etc/nginx/sites-available/localhost /etc/nginx/sites-enabled/
-
-cp info.php /var/www/html/info.php
-
+# SQL
 service mysql start
+sudo mysql < wordpress.sql
 
-/etc/init.d/php7.3-fpm start
-/etc/init.d/php7.3-fpm status
+# SSL
+wget https://github.com/FiloSottile/mkcert/releases/download/v1.4.0/mkcert-v1.4.0-linux-amd64
+chmod +x mkcert-v1.4.0-linux-amd64
+sudo mv ./mkcert-v1.4.0-linux-amd64 /usr/local/bin/mkcert
+mkcert -install
+mkcert localhost 127.0.0.1
 
-# SSL part
-apt-get install openssl
+# Nginx
+rm -rf /etc/nginx/sites-enabled/default
+cp nginx.conf /etc/nginx/sites-enabled/
 
-tail -f /var/log/nginx/access.log /var/log/nginx/error.log 
+# Wordpress
+tar xvfz latest.tar.gz
+mv wordpress/* /var/www/html/
+rm /var/www/html/wp-config-sample.php
+cp wp-config.php /var/www/html
+
+
+# PHPMyAdmin
+tar xvfz phpmyadmin.tar.gz
+mv phpMyAdmin-4.9.7-all-languages phpmyadmin
+mv phpmyadmin /var/www/html/
+
+service php7.3-fpm start
+service nginx start
+
+tail -f /var/log/nginx/access.log /var/log/nginx/error.log
